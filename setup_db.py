@@ -14,7 +14,7 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 cur.execute("""
 CREATE TABLE IF NOT EXISTS repositories (
-    repo_id BIGINT PRIMARY KEY,
+    repo_id TEXT PRIMARY KEY,
     name TEXT,
     owner TEXT,
     stars_count INT,
