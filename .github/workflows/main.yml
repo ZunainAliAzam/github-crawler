@@ -1,0 +1,56 @@
+name: GitHub Crawler
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: github_crawler
+        options: >-
+          --health-cmd "pg_isready"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # Step 1 — Checkout your code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2 — Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Step 3 — Install dependencies
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Step 4 — Create database table
+      - name: Set up PostgreSQL schema
+        run: python setup_db.py
+
+      # Step 5 — Run GitHub crawler
+      - name: Crawl GitHub repositories
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python crawl_stars.py
+
+      # Step 6 — Export DB contents to CSV
+      - name: Export data to CSV
+        run: |
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql -h localhost -U postgres -d github_crawler -c "\COPY repositories TO 'outpu_
