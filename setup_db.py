@@ -24,4 +24,4 @@ CREATE TABLE IF NOT EXISTS repositories (
 conn.commit()
 cur.close()
 conn.close()
-print("✅ Database setup complete.")
+print("Database setup complete.")

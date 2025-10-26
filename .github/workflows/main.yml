@@ -29,7 +29,7 @@ jobs:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: github_crawler
-      POSTGRES_HOST: localhost # ✅ match the service name
+      POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
@@ -59,10 +59,10 @@ jobs:
         run: |
           for i in {1..30}; do
             if pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER"; then
-              echo "✅ PostgreSQL is ready!"
+              echo "PostgreSQL is ready!"
               break
             fi
-            echo "⏳ Waiting for PostgreSQL to start..."
+            echo "Waiting for PostgreSQL to start..."
             sleep 5
           done
 
@@ -75,9 +75,9 @@ jobs:
       - name: Export data to CSV
         run: |
           sudo apt-get install -y postgresql-client
-          echo "📦 Exporting data from database..."
+          echo "Exporting data from database..."
           PGPASSWORD=$POSTGRES_PASSWORD psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\COPY repositories TO 'repositories.csv' CSV HEADER;"
-          echo "✅ Export complete: repositories.csv"
+          echo "Export complete: repositories.csv"
 
       - name: Upload CSV artifact
         uses: actions/upload-artifact@v4

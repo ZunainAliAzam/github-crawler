@@ -34,10 +34,7 @@ STAR_RANGES = [
     "stars:>100000"
 ]
 
-
-# ---------------------------
 # Fetch one page of repos
-# ---------------------------
 async def fetch_repos(session, cursor=None, star_filter="stars:>10"):
     query = """
     query ($cursor: String, $filter: String!) {
@@ -62,7 +59,7 @@ async def fetch_repos(session, cursor=None, star_filter="stars:>10"):
     variables = {"cursor": cursor, "filter": star_filter}
     async with session.post(GITHUB_API, json={"query": query, "variables": variables}) as response:
         if response.status != 200:
-            print(f"⚠️ GitHub API error {response.status} for {star_filter}")
+            print(f" GitHub API error {response.status} for {star_filter}")
             text = await response.text()
             print(text)
             return None
@@ -70,9 +67,7 @@ async def fetch_repos(session, cursor=None, star_filter="stars:>10"):
         return data["data"]["search"]
 
 
-# ---------------------------
 # Save to PostgreSQL
-# ---------------------------
 async def save_to_db(pool, repos):
     async with pool.acquire() as conn:
         async with conn.transaction():
@@ -87,9 +82,7 @@ async def save_to_db(pool, repos):
             """, node["id"], node["name"], node["owner"]["login"], node["stargazerCount"])
 
 
-# ---------------------------
 # Main crawl logic
-# ---------------------------
 async def crawl():
     start_time = time.time()
     total_repos = 0
@@ -97,7 +90,7 @@ async def crawl():
     pool = await asyncpg.create_pool(**DB_CONFIG)
     async with aiohttp.ClientSession(headers=headers) as session:
         for star_filter in STAR_RANGES:
-            print(f"\n🚀 Crawling range: {star_filter}")
+            print(f"\n Crawling range: {star_filter}")
             cursor = None
             page_count = 0
             while True:
@@ -110,7 +103,7 @@ async def crawl():
                 await save_to_db(pool, result["edges"])
                 total_repos += len(result["edges"])
                 page_count += 1
-                print(f"✅ {star_filter} | Page {page_count} | Total repos: {total_repos}")
+                print(f" {star_filter} | Page {page_count} | Total repos: {total_repos}")
 
                 cursor = result["pageInfo"]["endCursor"]
                 if not result["pageInfo"]["hasNextPage"]:
@@ -120,7 +113,7 @@ async def crawl():
 
     await pool.close()
     elapsed = time.time() - start_time
-    print(f"\n🎉 Finished crawling {total_repos} repositories in {elapsed/60:.2f} minutes.")
+    print(f"\n Finished crawling {total_repos} repositories in {elapsed/60:.2f} minutes.")
 
 
 if __name__ == "__main__":
