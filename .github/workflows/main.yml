@@ -29,7 +29,7 @@ jobs:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: github_crawler
-      POSTGRES_HOST: db # ✅ match the service name
+      POSTGRES_HOST: localhost # ✅ match the service name
       POSTGRES_PORT: 5432
       GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
