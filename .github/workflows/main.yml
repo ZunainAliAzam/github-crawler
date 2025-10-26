@@ -39,17 +39,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Step 4 — Create database table
+      # Step 4: PostgreSQL to be ready
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER; do
+            echo "Waiting for PostgreSQL to start..."
+            sleep 5
+          done
+
+      # Step 5 — Create database table
       - name: Set up PostgreSQL schema
         run: python setup_db.py
 
-      # Step 5 — Run GitHub crawler
+      # Step 6 — Run GitHub crawler
       - name: Crawl GitHub repositories
         env:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: python crawl_stars.py
 
-      # Step 6 — Export DB contents to CSV
+      # Step 7 — Export DB contents to CSV
       - name: Export data to CSV
         run: |
           sudo apt-get install -y postgresql-client
