@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      postgres:
-        image: postgres:latest
+      db:
+        image: postgres:16
         ports:
           - 5432:5432
         env:
@@ -20,66 +20,57 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: github_crawler
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U postgres -d github_crawler"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     env:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: github_crawler
-      POSTGRES_HOST: postgres        # <-- connect to the service, not localhost
+      POSTGRES_HOST: db # ✅ match the service name
       POSTGRES_PORT: 5432
       GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
     steps:
-      # Step 1 — Checkout your code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2 — Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # Step 3 — Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 4 — Wait for PostgreSQL to be ready
       - name: Wait for PostgreSQL to be ready
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_HOST: postgres
-          POSTGRES_PORT: 5432
         run: |
-          until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER"; do
+          for i in {1..30}; do
+            if pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER"; then
+              echo "✅ PostgreSQL is ready!"
+              break
+            fi
             echo "⏳ Waiting for PostgreSQL to start..."
             sleep 5
           done
-          echo "✅ PostgreSQL is ready!"
 
-      # Step 5 — Create database table
-      - name: Set up PostgreSQL schema
+      - name: Set up database
         run: python setup_db.py
 
-      # Step 6 — Run GitHub crawler
-      - name: Crawl GitHub repositories
+      - name: Run GitHub crawler
         run: python crawl_stars.py
 
-      # Step 7 — Export DB contents to CSV
       - name: Export data to CSV
         run: |
           sudo apt-get install -y postgresql-client
           echo "📦 Exporting data from database..."
-          PGPASSWORD=postgres psql -h postgres -U postgres -d github_crawler -c "\COPY repositories TO 'repositories.csv' CSV HEADER;"
+          PGPASSWORD=$POSTGRES_PASSWORD psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\COPY repositories TO 'repositories.csv' CSV HEADER;"
           echo "✅ Export complete: repositories.csv"
 
-      # Step 8 — Upload CSV as workflow artifact
       - name: Upload CSV artifact
         uses: actions/upload-artifact@v4
         with:
