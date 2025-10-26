@@ -47,6 +47,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Debug network connectivity
+        run: |
+          echo "Containers on this runner:"
+          docker ps -a || true
+          echo "Trying to ping database container..."
+          apt-get update && apt-get install -y inetutils-ping
+          ping -c 3 db || ping -c 3 postgres || echo "Could not reach container hostname"
+
       - name: Wait for PostgreSQL to be ready
         run: |
           for i in {1..30}; do
