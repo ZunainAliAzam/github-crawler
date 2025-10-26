@@ -5,6 +5,7 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   crawl:
     runs-on: ubuntu-latest
@@ -19,10 +20,18 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: github_crawler
         options: >-
-          --health-cmd "pg_isready"
+          --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: github_crawler
+      POSTGRES_HOST: postgres        # <-- connect to the service, not localhost
+      POSTGRES_PORT: 5432
+      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
     steps:
       # Step 1 — Checkout your code
@@ -37,15 +46,22 @@ jobs:
 
       # Step 3 — Install dependencies
       - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      # Step 4: PostgreSQL to be ready
-      - name: Wait for PostgreSQL to be ready
         run: |
-          until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER; do
-            echo "Waiting for PostgreSQL to start..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4 — Wait for PostgreSQL to be ready
+      - name: Wait for PostgreSQL to be ready
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST: postgres
+          POSTGRES_PORT: 5432
+        run: |
+          until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER"; do
+            echo "⏳ Waiting for PostgreSQL to start..."
             sleep 5
           done
+          echo "✅ PostgreSQL is ready!"
 
       # Step 5 — Create database table
       - name: Set up PostgreSQL schema
@@ -53,12 +69,19 @@ jobs:
 
       # Step 6 — Run GitHub crawler
       - name: Crawl GitHub repositories
-        env:
-          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: python crawl_stars.py
 
       # Step 7 — Export DB contents to CSV
       - name: Export data to CSV
         run: |
           sudo apt-get install -y postgresql-client
-          PGPASSWORD=postgres psql -h localhost -U postgres -d github_crawler -c "\COPY repositories TO 'outpu_
+          echo "📦 Exporting data from database..."
+          PGPASSWORD=postgres psql -h postgres -U postgres -d github_crawler -c "\COPY repositories TO 'repositories.csv' CSV HEADER;"
+          echo "✅ Export complete: repositories.csv"
+
+      # Step 8 — Upload CSV as workflow artifact
+      - name: Upload CSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repositories-data
+          path: repositories.csv
