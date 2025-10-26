@@ -46,7 +46,7 @@ jobs:
       # Step 5 — Run GitHub crawler
       - name: Crawl GitHub repositories
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: python crawl_stars.py
 
       # Step 6 — Export DB contents to CSV

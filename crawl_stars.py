@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GITHUB_API = "https://api.github.com/graphql"
-TOKEN = os.getenv("GITHUB_TOKEN")
+TOKEN = os.getenv("GH_ACCESS_TOKEN")
 
 headers = {"Authorization": f"Bearer {TOKEN}"}
 
